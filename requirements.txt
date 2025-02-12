@@ -1,0 +1,8 @@
+flask
+flask-sqlalchemy
+pyodbc
+flask-login
+python-dotenv
+flask-socketio==5.3.6
+python-engineio==4.8.0
+python-socketio==5.10.0 
