@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h3>Chat with {{ other_user.full_name }}</h3>
+        <div class="chat-container" id="chatContainer">
+            <!-- Messages will be loaded here -->
+        </div>
+        <div class="input-group mt-3">
+            <input type="text" class="form-control" id="messageInput" placeholder="Type your message...">
+            <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const otherId = {{ other_user.id }};
+const currentUserId = {{ current_user.id }};
+const socket = io();
+
+socket.on('connect', () => {
+    console.log('Connected to Socket.IO server');
+});
+
+socket.on('new_message', (message) => {
+    if ((message.sender_id === currentUserId && message.receiver_id === otherId) ||
+        (message.sender_id === otherId && message.receiver_id === currentUserId)) {
+        appendMessage(message);
+    }
+});
+
+function appendMessage(msg) {
+    const container = document.getElementById('chatContainer');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${msg.sender_id === currentUserId ? 'sent' : 'received'}`;
+    messageDiv.innerHTML = `
+        ${msg.content}
+        <small class="d-block">${new Date(msg.timestamp).toLocaleString()}</small>
+    `;
+    container.appendChild(messageDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+function loadMessages() {
+    fetch(`/api/messages/${otherId}`)
+        .then(response => response.json())
+        .then(messages => {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = messages.map(msg => `
+                <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
+                    ${msg.content}
+                    <small class="d-block">${new Date(msg.timestamp).toLocaleString()}</small>
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        });
+}
+
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    
+    if (!content) return;
+    
+    socket.emit('send_message', {
+        content: content,
+        receiver_id: otherId
+    });
+    
+    input.value = '';
+}
+
+document.getElementById('messageInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+});
+
+// Load initial messages
+loadMessages();
+</script>
+{% endblock %} 
